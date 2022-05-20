@@ -1,0 +1,28 @@
+bu2_OperationArray (CLASS)
+    -DESC: An array of variable length meant to represent multiple elements related by an operation (addition, multiplication,
+    exponential). This operation is determined by the subclasses: bu2_TermArray (addition), bu2_CoefficientArray (multiplication),
+    and bu2_ExponentArray (exponential)
+
+bu2_ExpressionArray (CLASS)
+    -DESC: An operation array with an additional array to specify the equators (= < >) in the problem.
+
+bu2_TermArray (CLASS)
+    -DESC: An operation array that represents addition executed from left to right
+
+bu2_CoefficientArray (CLASS)
+    -DESC: An operation array that represents multiplication executed from left to right
+
+bu2_ExponentArray (CLASS)
+    -DESC: Ac operation array that represents exponential operations executed from right to left.
+
+bu2_simplify_distribute
+    -IN: Any instance of an operation array
+    -DESC: Starts by checking for any element in the input that is an operation array previous to it's self (eg. A coefficient
+    array will be looking for term arrays, same for exponent => coefficient). When it finds one it will
+
+bu2_toMachine_organize
+
+bu2_simplify_surfaceExecute
+
+bu2_simplify_surfaceSolveForVariable
+    -IN: An expression array, the mathematical variable meant to solve for.
