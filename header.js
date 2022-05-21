@@ -153,12 +153,12 @@ function bu2_toMachine_sliceAtTerms(string) { //splice the string where there is
 
 //---------------------------------------------------------------------------------------slice at coefficients
 function bu2_toMachine_sliceAtCoefficients(string) { //splice the term into it's factors
-	let parenStacks = [0, 0, 0]; //create stacks for [bu2_const_parenthesis '()', bracket '[]', brace '{}']
+	let parenStacks = [0, 0, 0]; //create stacks for [parenthesis '()', bracket '[]', brace '{}']
 
 	let coefficients = []; //array for coefficients
 	let coefficientBuild = ""; //builder for coefficients
 	for (i=0; i<string.length; i++) { //loop through term string
-		if (parenStacks[0] === 0 && parenStacks[1] === 0 && parenStacks[2] === 0) { //if there are no openbu2_const_parenthesis
+		if (parenStacks[0] === 0 && parenStacks[1] === 0 && parenStacks[2] === 0) { //if there are no open parenthesis
 			if ( //if implied multiplication with parenthesis
 				bu2_const_parenthesis.includes(string[i]) && //the current character is parenthesis
 				!(bu2_const_operators.includes(string[i-1])) && //there is no operator in front of the paren
@@ -303,12 +303,22 @@ class bu2_OperationArray extends Array {
 		} else { //exponents / error -->
 			let exponentArray = bu2_toMachine_sliceAtExponents(string);
 			if (exponentArray.length > 1) { //if exponent
-				let exponent;
-				exponentArray.map(function (e, i) {
-					if (exponent instanceof bu2_MathematicalConstant) { //if it is a constant
-
+				bu2_debug_groupC(`Exponent ("${string}")`);
+				let newExponent = null;
+				exponentArray.reverse().map(function (e, i) { //loop through array backwards
+					e = bu2_OperationArray.prototype.handleString(e);
+					console.log(newExponent, e);
+					if (newExponent !== null) {
+						e.exponent = newExponent;
 					}
-				})
+					newExponent = (
+						e.type === "MathematicalConstant" && //is the value of e a number?
+						!isNaN(e.exponent) //is the exponent of e a number?
+					) ? Math.pow(e.val, e.exponent) : e ; //if so: execute those two, if not just return
+				});
+
+				bu2_debug_groupEnd();
+				return newExponent;
 			} else { //buford don't have a damn clue anymore
 				console.error(`The string: "${string}" was not recognized. Maybe check the documentation?`);
 			}
