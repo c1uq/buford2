@@ -26,13 +26,13 @@ function bu2_debug_printMatrix(matrix) {
 	if (bu2_debug_doDebug) {
 		bu2_debug_groupC(matrix.type);
 		matrix.map((e, i) => {
-				if (Array.isArray(e))
-					bu2_debug_printMatrix(e);
-				else {
-					//bu2_debug_groupC(isNaN(e) ? ` ${e.character} (Variable)` : ` ${e} (Number)`); bu2_debug_groupEnd();
-					bu2_debug_log("PRINT", isNaN(e) ? `Variable` : `Number`, isNaN(e) ? e.character : e);
-				}
-			});
+			if (Array.isArray(e))
+				bu2_debug_printMatrix(e);
+			else {
+				//bu2_debug_groupC(isNaN(e) ? ` ${e.character} (Variable)` : ` ${e} (Number)`); bu2_debug_groupEnd();
+				bu2_debug_log("PRINT", e.type === "MathematicalVariable" ? `Variable` : `Number`, e.type === "MathematicalVariable" ? e.character : e.val);
+			}
+		});
 		bu2_debug_groupEnd();
 	}
 }
@@ -174,8 +174,8 @@ function bu2_toMachine_sliceAtCoefficients(string) { //splice the term into it's
 				coefficientBuild = "/"; //converting division into multiplication
 			} else if (string[i] === '-') { //if theres a subtraction
 				coefficients.push(-1);
-			} else if (bu2_const_variables.includes(string[i])) { //if the char is a variable
-				if (coefficientBuild !== "") {
+			} else if (bu2_const_variables.includes(string[i]) && !(bu2_const_operators.includes(string[i-1]))) { //if the char is a variable and theres no operator in front
+				if (coefficientBuild !== "") { //if the build isn't empty
 					coefficients.push(coefficientBuild);
 				}
 				coefficientBuild = string[i];
@@ -280,7 +280,7 @@ class bu2_OperationArray extends Array {
 
 	constructor (slicedArray, nextClass) {
 		if (slicedArray instanceof Array) { //expected input
-			super(...slicedArray);
+			super(slicedArray.length);
 			this.nextClass = nextClass;
 			let calculatedArray = slicedArray.map(this.handleString, this);
 			calculatedArray.forEach((e, i) => {
@@ -318,7 +318,7 @@ class bu2_OperationArray extends Array {
 				});
 
 				bu2_debug_groupEnd();
-				return newExponent;
+				return (isNaN(newExponent)) ? newExponent : new bu2_MathematicalConstant(newExponent);
 			} else { //buford don't have a damn clue anymore
 				console.error(`The string: "${string}" was not recognized. Maybe check the documentation?`);
 			}
@@ -347,15 +347,18 @@ class bu2_ExpressionArray extends bu2_OperationArray {
 //----------------------------------------------------------------------------------------------term array
 class bu2_TermArray extends bu2_OperationArray { 
 	type = "TermArray";
+	nextClass = bu2_CoefficientArray;
 	
-	constructor (string) { //-------------------------------------------constructor
-		if (typeof string === "string") { //if expected input:
-			bu2_debug_groupC(`TermArray Constructor ("${string}")`); //debug
+	constructor (arg1) { //-------------------------------------------constructor
+		if (typeof arg1 === "string") { //if expected input:
+			bu2_debug_groupC(`TermArray Constructor ("${arg1}")`); //debug
 			
-			super(bu2_toMachine_sliceAtTerms(string), bu2_CoefficientArray);
+			super(bu2_toMachine_sliceAtTerms(arg1), bu2_CoefficientArray);
 			
 			bu2_debug_groupEnd(); //debug
-		} else super(string); //acception handling for length input
+		} else if (arg1 instanceof Array) { //if array was the given input
+			arg1.map((e, i) => {this[i] = e;});
+		} else super(arg1); //acception handling for length input
 	} //constructor
 }
 
@@ -366,14 +369,14 @@ class bu2_TermArray extends bu2_OperationArray {
 class bu2_CoefficientArray extends bu2_OperationArray { 
 	type = "CoefficientArray";
 	
-	constructor (string) { //-------------------------------------------constructor
-		if (typeof string === "string") { //if expected input:
-			bu2_debug_groupC(`CoefficientArray Constructor ("${string}")`); //debug
+	constructor (arg1) { //-------------------------------------------constructor
+		if (typeof arg1 === "string") { //if expected input:
+			bu2_debug_groupC(`CoefficientArray Constructor ("${arg1}")`); //debug
 			
-			super(bu2_toMachine_sliceAtCoefficients(string));
+			super(bu2_toMachine_sliceAtCoefficients(arg1));
 			
 			bu2_debug_groupEnd(); //debug
-		} else super(string); //acception handling for length input
+		} else super(arg1); //acception handling for length input
 	} //constructor
 }
 
@@ -383,34 +386,55 @@ class bu2_CoefficientArray extends bu2_OperationArray {
 //==========================================================================================================
 //-----------------------------------------------------------------------------------------------simplification
 //==========================================================================================================
-function bu2_simplify_coefSimplifyLight(coefArray) {
-	let constant = 1;
-	let variables = [];
-	let operationArrays = [];
-
-	coefArray.forEach(e => {
-		if (!isNaN(e)) constant *= e; //if constant
-		else if (e instanceof bu2_MathematicalVariable) { //if variable
-			
-		}
-	})
-
-	return new bu2_CoefficientArray([]);
+function bu2_simplify_unpackNests(operationArray) {
+	return operationArray.map(function (e, i) {
+		if (e instanceof Array) {
+			if (e.length < 2) {
+				
+			} else {
+				return bu2_simplify_unpackNests(e);
+			}
+		} else return e;
+	});
 }
 
+function bu2_simplify_multiply(opA1, opA2) {
+	
+}
 
+function bu2_simplify_coefficientSimplify(coefArray) {
+	
+}
+
+//---------------------------------------------------------------------------------sort
+function bu2_simplify_sort(opArray) { //sorts and adds constants
+	let constants = [];
+	let variables = [];
+	let operationArrays = [];
+	opArray.forEach(e => {
+		if (e instanceof bu2_MathematicalConstant) constants.push(e);
+		else if (e instanceof bu2_MathematicalVariable) variables.push(e);
+		else if (e instanceof bu2_OperationArray) operationArrays.push(e);
+		else console.error("The following element was not recognized:", e);
+	});
+	operationArrays = operationArrays.map(e => bu2_simplify_sort(e));
+	opArray.splice(0, opArray.length, ...constants.sort(), ...variables.sort(), ...operationArrays.sort());
+	return opArray;
+}
 
 //==========================================================================================================
 //----------------------------------------------------------------------------------------------------general
 //==========================================================================================================
 
 function bu2_classifyElement(value) {
-	if (!isNaN(value)) return "constant";
-	else if (value instanceof bu2_MathematicalVariable) return "variable";
-	else if (value instanceof bu2_ExpressionArray) return "expression array";
-	else if (value instanceof bu2_TermArray) return "term array";
-	else if (value instanceof bu2_CoefficientArray) return "coefficient array";
-	else if (value instanceof bu2_ExponentArray) return "exponent array";
+	if (!isNaN(value)) return "INT";
+	else if (value instanceof bu2_MathematicalConstant) return "MathematicalConstant";
+	else if (value instanceof bu2_MathematicalVariable) return "MathematicalVariable";
+	else if (value instanceof bu2_ExpressionArray) return "ExpressionArray";
+	else if (value instanceof bu2_TermArray) return "TermArray";
+	else if (value instanceof bu2_CoefficientArray) return "CoefficientArray";
+	else if (value instanceof bu2_ExponentArray) return "ExponentArray";
+	else return "idek";
 }
 
 
