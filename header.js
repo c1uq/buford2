@@ -1,6 +1,6 @@
 
 /*
-	*Buford2 header (not sure if I'm using the right word there, but the global functions and stuff)
+	*Buford2 private functions
 */
 
 //==========================================================================================================
@@ -386,6 +386,8 @@ class bu2_CoefficientArray extends bu2_OperationArray {
 //==========================================================================================================
 //-----------------------------------------------------------------------------------------------simplification
 //==========================================================================================================
+
+//----------------------------------------------------------------------------------------------------------------------unpack nests
 function bu2_simplify_unpackNests(operationArray) {
 	return operationArray.map(function (e, i) {
 		if (e instanceof Array) {
@@ -398,16 +400,51 @@ function bu2_simplify_unpackNests(operationArray) {
 	});
 }
 
-function bu2_simplify_multiply(opA1, opA2) {
-	
+//-------------------------------------------------------------------------------------------------------------------------add
+function bu2_simplify_addExponents(acceptFloats, ...args) {
+
 }
 
-function bu2_simplify_coefficientSimplify(coefArray) {
-	
+//--------------------------------------------------------------------------------------------------------------------------coefficientSimplifyLight
+function bu2_simplify_coefficientSimplifyLight(coefArray) {
+	let constant = 1;
+	let variables = [];
+	let opArrays = [];
+
+	coefArray.map((factor) => {
+		if (factor instanceof bu2_MathematicalConstant) {
+			constant *= factor.val;
+		} else if (factor instanceof bu2_MathematicalVariable) { //-------------------------variable
+			let matchFound = false;
+			for (i = 0; i < variables.length && !matchFound; i++) {//loop through the variables that are already processed
+				if (variables[i].index === factor.index) { //if they are the same variable
+					variables[i].exponent += factor.exponent;
+					matchFound = true;
+				}
+			}
+			if (!matchFound) variables.push(factor);
+		} else if (factor instanceof bu2_OperationArray) { //-------------------------operation array
+			bu2_simplify_sort(factor);
+			let matchFound = false;
+			for (i = 0; i < opArrays.length && !matchFound; i++) {//loop through the oparrays that are already processed
+				if (bu2_compareOperationArrayNoExponentNoSort(opArrays[i], factor)) { //if they have the same contents
+					opArrays[i].exponent += factor.exponent;
+					matchFound = true;
+				}
+			}
+			if (!matchFound) opArrays.push(factor);
+		} else console.error(`The following value was not recognized:`, factor);
+	});
+
+	constant = new bu2_MathematicalConstant(constant);
+	coefArray.splice(0, coefArray.length, constant, ...variables, ...opArrays);
+	if (coefArray.length == 1) coefArray = coefArray[0];
+
+	return coefArray;
 }
 
 //---------------------------------------------------------------------------------sort
-function bu2_simplify_sort(opArray) { //sorts and adds constants
+function bu2_simplify_sort(opArray) { //sorts
 	let constants = [];
 	let variables = [];
 	let operationArrays = [];
@@ -437,6 +474,15 @@ function bu2_classifyElement(value) {
 	else return "idek";
 }
 
+function bu2_compareOperationArrayNoExponentNoSort(opArray1, opArray2) {
+	let str1 = opArray1.map(e => JSON.stringify(e));
+	let str2 = opArray2.map(e => JSON.stringify(e));
+	
+	str1 = str1.toString();
+	str2 = str2.toString();
+
+	return str1 === str2;
+}
 
 //==========================================================================================================
 //----------------------------------------------------------------------------------------------------the end!
