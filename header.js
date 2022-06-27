@@ -151,59 +151,59 @@ function bu2_toMachine_sliceAtTerms(string) { //splice the string where there is
 
 
 
-//---------------------------------------------------------------------------------------slice at coefficients
-function bu2_toMachine_sliceAtCoefficients(string) { //splice the term into it's factors
+//---------------------------------------------------------------------------------------slice at factors
+function bu2_toMachine_sliceAtFactors(string) { //splice the term into it's factors
 	let parenStacks = [0, 0, 0]; //create stacks for [parenthesis '()', bracket '[]', brace '{}']
 
-	let coefficients = []; //array for coefficients
-	let coefficientBuild = ""; //builder for coefficients
+	let factors = []; //array for factors
+	let factorBuild = ""; //builder for factors
 	for (i=0; i<string.length; i++) { //loop through term string
 		if (parenStacks[0] === 0 && parenStacks[1] === 0 && parenStacks[2] === 0) { //if there are no open parenthesis
 			if ( //if implied multiplication with parenthesis
 				bu2_const_parenthesis.includes(string[i]) && //the current character is parenthesis
 				!(bu2_const_operators.includes(string[i-1])) && //there is no operator in front of the paren
-				!(coefficientBuild === "") //there is a term to be pushed
+				!(factorBuild === "") //there is a term to be pushed
 			) { 
-				coefficients.push(coefficientBuild);
-				coefficientBuild = "(";
+				factors.push(factorBuild);
+				factorBuild = "(";
 			} else if (string[i] === '*') { //if its a multiplication
-				coefficients.push(coefficientBuild);
-				coefficientBuild = "";
+				factors.push(factorBuild);
+				factorBuild = "";
 			} else if (string[i] === '/') { //if it's division
-				coefficients.push(coefficientBuild);
-				coefficientBuild = "/"; //converting division into multiplication
+				factors.push(factorBuild);
+				factorBuild = "/"; //converting division into multiplication
 			} else if (string[i] === '-') { //if theres a subtraction
-				coefficients.push(-1);
+				factors.push(-1);
 			} else if (bu2_const_variables.includes(string[i]) && !(bu2_const_operators.includes(string[i-1]))) { //if the char is a variable and theres no operator in front
-				if (coefficientBuild !== "") { //if the build isn't empty
-					coefficients.push(coefficientBuild);
+				if (factorBuild !== "") { //if the build isn't empty
+					factors.push(factorBuild);
 				}
-				coefficientBuild = string[i];
+				factorBuild = string[i];
 			} else if (bu2_const_numbers.includes(string[i])) { //if it's a number
-				if (bu2_const_variables.includes(coefficientBuild)) { //if the term builder is a variable
-					coefficients.push(coefficientBuild); //push it because the next will be a new term
-					coefficientBuild = "";
+				if (bu2_const_variables.includes(factorBuild)) { //if the term builder is a variable
+					factors.push(factorBuild); //push it because the next will be a new term
+					factorBuild = "";
 				}
-				coefficientBuild += string[i];
+				factorBuild += string[i];
 			} else { //if its none of those
-				coefficientBuild += string[i];
+				factorBuild += string[i];
 			}
 			
 		}//paren check
 
 		else { //ifbu2_const_parenthesis is open
-			coefficientBuild += string[i];
+			factorBuild += string[i];
 		}
 	
 		parenStacks = bu2_toMachine_checkParenthesis(parenStacks, string[i]); //keep the paren stack up to date
 	} //end term loop
-	if (coefficientBuild !== "") { //if it there are leftovers
-		coefficients.push(coefficientBuild);
+	if (factorBuild !== "") { //if it there are leftovers
+		factors.push(factorBuild);
 	}
 	
-	//bu2_debug_log("sliceAtCoefficients", "out", coefficients.slice());
-	return coefficients;
-}//sliceAtCoefficients
+	//bu2_debug_log("sliceAtFactors", "out", factors.slice());
+	return factors;
+}//sliceAtFactors
 
 
 
@@ -212,8 +212,6 @@ function bu2_toMachine_sliceAtCoefficients(string) { //splice the term into it's
 //------------------------------------------------------------------slice at exponents
 function bu2_toMachine_sliceAtExponents(string) {
 	let parenStacks = [0, 0, 0]; //create stacks for [bu2_const_parenthesis '()', bracket '[]', brace '{}']
-	
-	let reciprocal = false;
 	
 	let exponents = [];
 	let exponentBuild = "";
@@ -328,55 +326,41 @@ class bu2_OperationArray extends Array {
 
 
 
-//--------------------------------------------------------------------------------------------expression array
-class bu2_ExpressionArray extends bu2_OperationArray { 
-	type = "ExpressionArray";
-	
-	constructor (string) { //-------------------------------------------constructor
-		bu2_debug_groupC(`ExpressionArray Constructor ("${string}")`); //debug
-		let exprReturn = bu2_toMachine_sliceAtExpressions(string);
-		super(exprReturn[0], bu2_TermArray);
-		this.operators = exprReturn[1];
-		bu2_debug_groupEnd(); //debug
-	}
-}
-
-
-
-
 //----------------------------------------------------------------------------------------------term array
 class bu2_TermArray extends bu2_OperationArray { 
 	type = "TermArray";
-	nextClass = bu2_CoefficientArray;
+	nextClass = bu2_FactorArray;
 	
 	constructor (arg1) { //-------------------------------------------constructor
 		if (typeof arg1 === "string") { //if expected input:
 			bu2_debug_groupC(`TermArray Constructor ("${arg1}")`); //debug
 			
-			super(bu2_toMachine_sliceAtTerms(arg1), bu2_CoefficientArray);
+			super(bu2_toMachine_sliceAtTerms(arg1), bu2_FactorArray);
 			
 			bu2_debug_groupEnd(); //debug
-		} else if (arg1 instanceof Array) { //if array was the given input
-			arg1.map((e, i) => {this[i] = e;});
-		} else super(arg1); //acception handling for length input
+		} else if (arg1 instanceof Array) {
+			arg1.map((e, i) => this[i] = e);
+		} else super(arg1); //acception handling for other input
 	} //constructor
 }
 
 
 
 
-//-------------------------------------------------------------------------------------------coefficient array
-class bu2_CoefficientArray extends bu2_OperationArray { 
-	type = "CoefficientArray";
+//-------------------------------------------------------------------------------------------factor array
+class bu2_FactorArray extends bu2_OperationArray { 
+	type = "FactorArray";
 	
 	constructor (arg1) { //-------------------------------------------constructor
 		if (typeof arg1 === "string") { //if expected input:
-			bu2_debug_groupC(`CoefficientArray Constructor ("${arg1}")`); //debug
+			bu2_debug_groupC(`FactorArray Constructor ("${arg1}")`); //debug
 			
-			super(bu2_toMachine_sliceAtCoefficients(arg1));
+			super(bu2_toMachine_sliceAtFactors(arg1));
 			
 			bu2_debug_groupEnd(); //debug
-		} else super(arg1); //acception handling for length input
+		} else if (arg1 instanceof Array) {
+			arg1.map((e, i) => this[i] = e);
+		} else super(arg1); //acception handling for other input
 	} //constructor
 }
 
@@ -387,31 +371,31 @@ class bu2_CoefficientArray extends bu2_OperationArray {
 //-----------------------------------------------------------------------------------------------simplification
 //==========================================================================================================
 
-//----------------------------------------------------------------------------------------------------------------------unpack nests
-function bu2_simplify_unpackNests(operationArray) {
-	return operationArray.map(function (e, i) {
-		if (e instanceof Array) {
-			if (e.length < 2) {
-				
-			} else {
-				return bu2_simplify_unpackNests(e);
-			}
-		} else return e;
-	});
+/* -------------------------------------------------------------------------------------------------------------------------add
+*IN: Any number of values to be added. SORTING REQUIRED BEFOREHAND FOR EACH ARGUEMENT!
+*DESC: Adds the given arguements if possible, returns a term array if not.
+*/
+function bu2_simplify_add(...terms) {
+	let returnArray = new bu2_TermArray(0);
+	
 }
 
-//-------------------------------------------------------------------------------------------------------------------------add
-function bu2_simplify_addExponents(acceptFloats, ...args) {
 
-}
-
-//--------------------------------------------------------------------------------------------------------------------------coefficientSimplifyLight
-function bu2_simplify_coefficientSimplifyLight(coefArray) {
+/* ---------------------------------------------------------------------------------------------------------------factorSimplifyLight
+*IN: Any instance of a factor array
+*DESC: Loops through the factor array. It will catagorize each element by MathematicalConstant, MathematicalVariable, and OperationArray.
+	*If it is a constant it will be multiplied by the constant variable (which will be put at the front of the output array).
+	*If it is a mathematical variable then it will check for identical variables in the output. If it finds an identical 
+	variable then it will add it's exponent to it's twin. If it does not find an identical variable then it will add it to the output.
+	*If it is an operation array then it will sort it, and then check for matches in the same manner as the variable.
+*BUGS: Cannot add exponents that are not of primary int value.
+*/
+function bu2_simplify_factorSimplifyLight(factorArray) {
 	let constant = 1;
 	let variables = [];
 	let opArrays = [];
 
-	coefArray.map((factor) => {
+	factorArray.map((factor) => {
 		if (factor instanceof bu2_MathematicalConstant) {
 			constant *= factor.val;
 		} else if (factor instanceof bu2_MathematicalVariable) { //-------------------------variable
@@ -437,13 +421,17 @@ function bu2_simplify_coefficientSimplifyLight(coefArray) {
 	});
 
 	constant = new bu2_MathematicalConstant(constant);
-	coefArray.splice(0, coefArray.length, constant, ...variables, ...opArrays);
-	if (coefArray.length == 1) coefArray = coefArray[0];
+	factorArray.splice(0, factorArray.length, constant, ...variables, ...opArrays);
+	if (factorArray.length == 1) factorArray = factorArray[0];
 
-	return coefArray;
+	return factorArray;
 }
 
-//---------------------------------------------------------------------------------sort
+/* ---------------------------------------------------------------------------------sort
+*IN: Any operation array
+*DESC: Sorts the operation array with constants being first, variables, and then operation arrays. It will also sort each of these groups
+using the 'Array.prototype.sort' method (recurs 'bu2_simplify_sort' on operation arrays before using 'Array.prototype.sort').
+*/
 function bu2_simplify_sort(opArray) { //sorts
 	let constants = [];
 	let variables = [];
@@ -467,9 +455,8 @@ function bu2_classifyElement(value) {
 	if (!isNaN(value)) return "INT";
 	else if (value instanceof bu2_MathematicalConstant) return "MathematicalConstant";
 	else if (value instanceof bu2_MathematicalVariable) return "MathematicalVariable";
-	else if (value instanceof bu2_ExpressionArray) return "ExpressionArray";
 	else if (value instanceof bu2_TermArray) return "TermArray";
-	else if (value instanceof bu2_CoefficientArray) return "CoefficientArray";
+	else if (value instanceof bu2_FactorArray) return "FactorArray";
 	else if (value instanceof bu2_ExponentArray) return "ExponentArray";
 	else return "idek";
 }

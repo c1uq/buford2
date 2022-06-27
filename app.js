@@ -15,6 +15,9 @@ function Buford2 () {
 	
 }
 
+Buford2.simplifyExpression = function (expression) {
+
+}
 
 
 
