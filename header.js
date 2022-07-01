@@ -378,6 +378,9 @@ class bu2_FactorArray extends bu2_OperationArray {
 function bu2_simplify_add(...terms) {
 	let returnArray = new bu2_TermArray(0);
 	
+	for (termI=0;termI<terms.length-1;termI++) {
+		
+	}
 }
 
 
